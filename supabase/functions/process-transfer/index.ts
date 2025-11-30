@@ -1,14 +1,30 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+/**
+ * Edge Function: process-transfer
+ * - Validates input and caller.
+ * - Calls the DB RPC `process_transfer` to perform an atomic transfer.
+ *
+ * Environment expectations:
+ * - SUPABASE_URL
+ * - SUPABASE_SERVICE_ROLE_KEY (or other key with permission to run the RPC / SECURITY DEFINER)
+ *
+ * Authentication:
+ * - Expects Authorization: Bearer <access_token> header from the caller.
+ * - Uses supabase.auth.getUser(token) to resolve the user id.
+ *
+ * Adjust the auth resolution to match your deployment (if you use a different auth flow).
+ */
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { serve } from "std/server";
+import { createClient } from "@supabase/supabase-js";
 
-// Rate limiting configuration
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
-const MAX_TRANSFERS_PER_WINDOW = 10;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!; // required to bypass RLS into RPC if needed
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error("Missing SUPABASE URL or SERVICE_ROLE_KEY environment variables.");
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 interface TransferRequest {
   fromAccountId: string;
@@ -18,198 +34,64 @@ interface TransferRequest {
   description?: string;
 }
 
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+serve(async (req: Request) => {
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get user from auth header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header');
+    if (req.method !== "POST") {
+      return new Response(JSON.stringify({ success: false, error: "Method not allowed" }), { status: 405 });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : "";
 
-    if (authError || !user) {
-      throw new Error('Unauthorized');
+    if (!token) {
+      return new Response(JSON.stringify({ success: false, error: "Missing Authorization token" }), { status: 401 });
     }
 
-    const { fromAccountId, toAccountNumber, toAccountName, amount, description }: TransferRequest = await req.json();
+    // Resolve the user from the token
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser(token);
 
-    // Input validation
-    if (!fromAccountId || !toAccountNumber || !toAccountName || !amount) {
-      throw new Error('Missing required fields');
+    if (userError || !user) {
+      console.error("auth.getUser error:", userError);
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401 });
     }
 
-    if (amount <= 0) {
-      throw new Error('Amount must be greater than zero');
+    const body = await req.json() as TransferRequest;
+
+    if (!body || !body.fromAccountId || !body.toAccountNumber || !body.amount || body.amount <= 0) {
+      return new Response(JSON.stringify({ success: false, error: "Invalid input" }), { status: 400 });
     }
 
-    if (amount > 1000000) {
-      throw new Error('Amount exceeds maximum transfer limit');
+    // Call the RPC to perform atomic transfer
+    const { data, error: rpcError } = await supabase.rpc("process_transfer", {
+      p_user_id: user.id,
+      p_from_account: body.fromAccountId,
+      p_to_account_number: body.toAccountNumber,
+      p_to_account_name: body.toAccountName,
+      p_amount: body.amount,
+      p_description: body.description ?? null,
+    });
+
+    if (rpcError) {
+      console.error("RPC error:", rpcError);
+      return new Response(JSON.stringify({ success: false, error: rpcError.message }), { status: 500 });
     }
 
-    if (toAccountNumber.length < 5 || toAccountNumber.length > 20) {
-      throw new Error('Invalid account number format');
+    // rpc returns an array of rows; take first
+    const result = Array.isArray(data) && data.length > 0 ? data[0] : data;
+
+    if (!result || result.success === false) {
+      return new Response(
+        JSON.stringify({ success: false, error: result?.error || "Transfer failed" }),
+        { status: 400 }
+      );
     }
 
-    console.log(`[Transfer] User ${user.id} initiating transfer of $${amount} from ${fromAccountId} to ${toAccountNumber}`);
-
-    // Check rate limiting
-    const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW);
-    
-    const { data: rateLimitData, error: rateLimitError } = await supabase
-      .from('transfer_rate_limits')
-      .select('*')
-      .eq('user_id', user.id)
-      .gte('window_start', windowStart.toISOString())
-      .order('window_start', { ascending: false })
-      .limit(1);
-
-    if (rateLimitError) {
-      console.error('[Rate Limit] Error checking rate limit:', rateLimitError);
-      throw new Error('Rate limit check failed');
-    }
-
-    let attemptCount = 1;
-    if (rateLimitData && rateLimitData.length > 0) {
-      attemptCount = rateLimitData[0].attempt_count + 1;
-      
-      if (attemptCount > MAX_TRANSFERS_PER_WINDOW) {
-        console.warn(`[Rate Limit] User ${user.id} exceeded rate limit (${attemptCount} attempts)`);
-        throw new Error(`Rate limit exceeded. Maximum ${MAX_TRANSFERS_PER_WINDOW} transfers per hour.`);
-      }
-
-      // Update rate limit count
-      await supabase
-        .from('transfer_rate_limits')
-        .update({ attempt_count: attemptCount })
-        .eq('id', rateLimitData[0].id);
-    } else {
-      // Create new rate limit entry
-      await supabase
-        .from('transfer_rate_limits')
-        .insert({
-          user_id: user.id,
-          attempt_count: 1,
-          window_start: new Date().toISOString()
-        });
-    }
-
-    console.log(`[Rate Limit] User ${user.id} - Attempt ${attemptCount}/${MAX_TRANSFERS_PER_WINDOW}`);
-
-    // Verify source account ownership and balance
-    const { data: account, error: accountError } = await supabase
-      .from('accounts')
-      .select('*')
-      .eq('id', fromAccountId)
-      .eq('user_id', user.id)
-      .single();
-
-    if (accountError || !account) {
-      console.error('[Account] Account not found or unauthorized:', accountError);
-      throw new Error('Source account not found or unauthorized');
-    }
-
-    if (parseFloat(account.balance) < amount) {
-      console.warn(`[Balance] Insufficient funds. Available: ${account.balance}, Required: ${amount}`);
-      throw new Error('Insufficient funds');
-    }
-
-    // Get request metadata for audit trail
-    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-    const userAgent = req.headers.get('user-agent') || 'unknown';
-
-    // Create transaction record
-    const { data: transaction, error: transactionError } = await supabase
-      .from('transactions')
-      .insert({
-        user_id: user.id,
-        from_account_id: fromAccountId,
-        to_account_number: toAccountNumber,
-        to_account_name: toAccountName,
-        amount,
-        description,
-        status: 'pending',
-        ip_address: ipAddress,
-        user_agent: userAgent,
-      })
-      .select()
-      .single();
-
-    if (transactionError) {
-      console.error('[Transaction] Error creating transaction:', transactionError);
-      throw new Error('Failed to create transaction');
-    }
-
-    console.log(`[Transaction] Created transaction ${transaction.id}`);
-
-    // Update account balance
-    const newBalance = parseFloat(account.balance) - amount;
-    const { error: updateError } = await supabase
-      .from('accounts')
-      .update({ balance: newBalance })
-      .eq('id', fromAccountId);
-
-    if (updateError) {
-      console.error('[Balance] Error updating balance:', updateError);
-      
-      // Mark transaction as failed
-      await supabase
-        .from('transactions')
-        .update({ status: 'failed' })
-        .eq('id', transaction.id);
-
-      throw new Error('Failed to process transfer');
-    }
-
-    // Mark transaction as completed
-    const { error: completeError } = await supabase
-      .from('transactions')
-      .update({ 
-        status: 'completed',
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', transaction.id);
-
-    if (completeError) {
-      console.error('[Transaction] Error completing transaction:', completeError);
-    }
-
-    console.log(`[Success] Transfer completed. New balance: $${newBalance}`);
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        transactionId: transaction.id,
-        newBalance,
-        message: 'Transfer completed successfully'
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-
-  } catch (error: any) {
-    console.error('[Error] Transfer failed:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: error.message || 'Transfer failed',
-        success: false
-      }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
+  } catch (err) {
+    console.error("Function error:", err);
+    return new Response(JSON.stringify({ success: false, error: String(err) }), { status: 500 });
   }
 });
