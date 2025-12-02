@@ -14,7 +14,7 @@
  * Adjust the auth resolution to match your deployment (if you use a different auth flow).
  */
 
-import { serve } from "std/server";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;

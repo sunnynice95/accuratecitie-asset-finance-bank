@@ -173,7 +173,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      process_transfer: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_from_account: string
+          p_to_account_name: string
+          p_to_account_number: string
+          p_user_id: string
+        }
+        Returns: {
+          error: string
+          success: boolean
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
