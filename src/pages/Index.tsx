@@ -5,10 +5,11 @@ import { TransactionItem } from "@/components/TransactionItem";
 import { QuickActions } from "@/components/QuickActions";
 import { TransferDialog } from "@/components/TransferDialog";
 import { TransactionDetailsDialog } from "@/components/TransactionDetailsDialog";
+import { TransactionFilter } from "@/components/TransactionFilter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, User, Settings, TrendingUp, LogOut, Loader2 } from "lucide-react";
+import { Bell, User, Settings, TrendingUp, LogOut, Loader2, ArrowRight } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
 
@@ -32,6 +33,8 @@ interface Transaction {
   completed_at: string | null;
 }
 
+type FilterStatus = "all" | "completed" | "failed";
+
 const Index = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -42,6 +45,7 @@ const Index = () => {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [transactionDetailsOpen, setTransactionDetailsOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterStatus>("all");
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -123,6 +127,10 @@ const Index = () => {
 
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "there";
 
+  const filteredTransactions = activeFilter === "all" 
+    ? transactions 
+    : transactions.filter(t => t.status === activeFilter);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -200,10 +208,25 @@ const Index = () => {
 
         {/* Recent Transactions */}
         <Card className="p-6 gradient-card shadow-custom-md border-border/50">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <h3 className="text-xl font-semibold text-foreground">
               Recent Transactions
             </h3>
+            <div className="flex items-center gap-3">
+              <TransactionFilter
+                activeFilter={activeFilter}
+                onFilterChange={setActiveFilter}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/transactions")}
+                className="text-primary hover:text-primary/80"
+              >
+                View All
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
           </div>
           <div className="space-y-2">
             {transactions.length === 0 ? (
@@ -211,21 +234,27 @@ const Index = () => {
                 No transactions yet. Make your first transfer!
               </p>
             ) : (
-              transactions.map((transaction) => (
-                <TransactionItem
-                  key={transaction.id}
-                  merchant={transaction.to_account_name}
-                  category={transaction.description || "Transfer"}
-                  amount={-parseFloat(transaction.amount.toString())}
-                  date={new Date(transaction.created_at).toLocaleString()}
-                  type="debit"
-                  status={transaction.status}
-                  onClick={() => {
-                    setSelectedTransaction(transaction);
-                    setTransactionDetailsOpen(true);
-                  }}
-                />
-              ))
+              filteredTransactions.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  No {activeFilter} transactions found.
+                </p>
+              ) : (
+                filteredTransactions.map((transaction) => (
+                  <TransactionItem
+                    key={transaction.id}
+                    merchant={transaction.to_account_name}
+                    category={transaction.description || "Transfer"}
+                    amount={-parseFloat(transaction.amount.toString())}
+                    date={new Date(transaction.created_at).toLocaleString()}
+                    type="debit"
+                    status={transaction.status}
+                    onClick={() => {
+                      setSelectedTransaction(transaction);
+                      setTransactionDetailsOpen(true);
+                    }}
+                  />
+                ))
+              )
             )}
           </div>
         </Card>
