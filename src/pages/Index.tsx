@@ -4,6 +4,7 @@ import { AccountCard } from "@/components/AccountCard";
 import { TransactionItem } from "@/components/TransactionItem";
 import { QuickActions } from "@/components/QuickActions";
 import { TransferDialog } from "@/components/TransferDialog";
+import { TransactionDetailsDialog } from "@/components/TransactionDetailsDialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,10 +24,12 @@ interface Transaction {
   id: string;
   from_account_id: string;
   to_account_name: string;
+  to_account_number: string;
   amount: number;
   status: string;
   created_at: string;
   description: string | null;
+  completed_at: string | null;
 }
 
 const Index = () => {
@@ -37,6 +40,8 @@ const Index = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [transactionDetailsOpen, setTransactionDetailsOpen] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -214,6 +219,11 @@ const Index = () => {
                   amount={-parseFloat(transaction.amount.toString())}
                   date={new Date(transaction.created_at).toLocaleString()}
                   type="debit"
+                  status={transaction.status}
+                  onClick={() => {
+                    setSelectedTransaction(transaction);
+                    setTransactionDetailsOpen(true);
+                  }}
                 />
               ))
             )}
@@ -226,6 +236,12 @@ const Index = () => {
         onOpenChange={setTransferDialogOpen}
         accounts={accounts}
         onSuccess={handleTransferSuccess}
+      />
+
+      <TransactionDetailsDialog
+        open={transactionDetailsOpen}
+        onOpenChange={setTransactionDetailsOpen}
+        transaction={selectedTransaction}
       />
     </div>
   );
