@@ -18,13 +18,19 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!; // required to bypass RLS into RPC if needed
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error("Missing SUPABASE URL or SERVICE_ROLE_KEY environment variables.");
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+// CORS headers for cross-origin requests
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 interface TransferRequest {
   fromAccountId: string;
@@ -35,16 +41,27 @@ interface TransferRequest {
 }
 
 serve(async (req: Request) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   try {
     if (req.method !== "POST") {
-      return new Response(JSON.stringify({ success: false, error: "Method not allowed" }), { status: 405 });
+      return new Response(JSON.stringify({ success: false, error: "Method not allowed" }), { 
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     const authHeader = req.headers.get("authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : "";
 
     if (!token) {
-      return new Response(JSON.stringify({ success: false, error: "Missing Authorization token" }), { status: 401 });
+      return new Response(JSON.stringify({ success: false, error: "Missing Authorization token" }), { 
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     // Resolve the user from the token
@@ -55,13 +72,19 @@ serve(async (req: Request) => {
 
     if (userError || !user) {
       console.error("auth.getUser error:", userError);
-      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { status: 401 });
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), { 
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     const body = await req.json() as TransferRequest;
 
     if (!body || !body.fromAccountId || !body.toAccountNumber || !body.amount || body.amount <= 0) {
-      return new Response(JSON.stringify({ success: false, error: "Invalid input" }), { status: 400 });
+      return new Response(JSON.stringify({ success: false, error: "Invalid input" }), { 
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     // Call the RPC to perform atomic transfer
@@ -76,7 +99,10 @@ serve(async (req: Request) => {
 
     if (rpcError) {
       console.error("RPC error:", rpcError);
-      return new Response(JSON.stringify({ success: false, error: rpcError.message }), { status: 500 });
+      return new Response(JSON.stringify({ success: false, error: rpcError.message }), { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     // rpc returns an array of rows; take first
@@ -85,13 +111,19 @@ serve(async (req: Request) => {
     if (!result || result.success === false) {
       return new Response(
         JSON.stringify({ success: false, error: result?.error || "Transfer failed" }),
-        { status: 400 }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
+    return new Response(JSON.stringify({ success: true }), { 
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   } catch (err) {
     console.error("Function error:", err);
-    return new Response(JSON.stringify({ success: false, error: String(err) }), { status: 500 });
+    return new Response(JSON.stringify({ success: false, error: String(err) }), { 
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 });

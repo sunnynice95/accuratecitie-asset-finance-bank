@@ -162,7 +162,7 @@ export type Database = {
           {
             foreignKeyName: "transfer_rate_limits_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
