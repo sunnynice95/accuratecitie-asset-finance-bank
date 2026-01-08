@@ -129,7 +129,7 @@ export default function Auth() {
 
       toast({
         title: "Account Created!",
-        description: "Welcome to Unfounded Online Banking.",
+        description: "Welcome to Accuratecitiefinance Online Banking.",
       });
 
       // Auto login after signup since auto-confirm is enabled
@@ -151,7 +151,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
       <Card className="w-full max-w-md p-8 shadow-custom-xl">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Unfounded Bank</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Accuratecitiefinance</h1>
           <p className="text-muted-foreground">Secure Online Banking</p>
         </div>
 

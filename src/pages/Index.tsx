@@ -141,7 +141,7 @@ const Index = () => {
               <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center">
                 <TrendingUp className="h-6 w-6 text-primary-foreground" />
               </div>
-              <h1 className="text-2xl font-bold text-foreground">Unfounded</h1>
+              <h1 className="text-2xl font-bold text-foreground">Accuratecitiefinance</h1>
             </div>
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" className="hover:bg-secondary">
