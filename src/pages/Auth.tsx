@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/form";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const loginSchema = z.object({
   email: z.string().trim().email("Invalid email address"),
@@ -151,6 +152,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
       <Card className="w-full max-w-md p-8 shadow-custom-xl">
         <div className="text-center mb-8">
+          <img src={logo} alt="Accuratecitiefinance" className="w-20 h-20 mx-auto mb-4 object-contain" />
           <h1 className="text-3xl font-bold text-foreground mb-2">Accuratecitiefinance</h1>
           <p className="text-muted-foreground">Secure Online Banking</p>
         </div>
