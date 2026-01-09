@@ -35,6 +35,8 @@ const corsHeaders = {
 interface TransferRequest {
   fromAccountId: string;
   toAccountNumber: string;
+  toIban?: string | null;
+  toSwiftBic?: string | null;
   toAccountName: string;
   amount: number;
   description?: string;

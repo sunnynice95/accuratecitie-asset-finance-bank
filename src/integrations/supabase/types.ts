@@ -21,7 +21,9 @@ export type Database = {
           account_type: string
           balance: number
           created_at: string
+          iban: string | null
           id: string
+          swift_bic: string | null
           updated_at: string
           user_id: string
         }
@@ -31,7 +33,9 @@ export type Database = {
           account_type: string
           balance?: number
           created_at?: string
+          iban?: string | null
           id?: string
+          swift_bic?: string | null
           updated_at?: string
           user_id: string
         }
@@ -41,7 +45,9 @@ export type Database = {
           account_type?: string
           balance?: number
           created_at?: string
+          iban?: string | null
           id?: string
+          swift_bic?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -57,21 +63,48 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
+          avatar_url: string | null
+          city: string | null
+          country: string | null
           created_at: string
+          date_of_birth: string | null
           full_name: string | null
           id: string
+          id_number: string | null
+          id_type: string | null
+          id_verified: boolean | null
+          phone: string | null
           updated_at: string
         }
         Insert: {
+          address?: string | null
+          avatar_url?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string
+          date_of_birth?: string | null
           full_name?: string | null
           id: string
+          id_number?: string | null
+          id_type?: string | null
+          id_verified?: boolean | null
+          phone?: string | null
           updated_at?: string
         }
         Update: {
+          address?: string | null
+          avatar_url?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string
+          date_of_birth?: string | null
           full_name?: string | null
           id?: string
+          id_number?: string | null
+          id_type?: string | null
+          id_verified?: boolean | null
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -88,6 +121,8 @@ export type Database = {
           status: string
           to_account_name: string
           to_account_number: string
+          to_iban: string | null
+          to_swift_bic: string | null
           user_agent: string | null
           user_id: string
         }
@@ -102,6 +137,8 @@ export type Database = {
           status?: string
           to_account_name: string
           to_account_number: string
+          to_iban?: string | null
+          to_swift_bic?: string | null
           user_agent?: string | null
           user_id: string
         }
@@ -116,6 +153,8 @@ export type Database = {
           status?: string
           to_account_name?: string
           to_account_number?: string
+          to_iban?: string | null
+          to_swift_bic?: string | null
           user_agent?: string | null
           user_id?: string
         }
@@ -167,6 +206,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_settings: {
+        Row: {
+          created_at: string | null
+          currency: string | null
+          data_sharing: boolean | null
+          email_notifications: boolean | null
+          id: string
+          language: string | null
+          marketing_emails: boolean | null
+          profile_visibility: string | null
+          push_notifications: boolean | null
+          theme: string | null
+          transaction_alerts: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          currency?: string | null
+          data_sharing?: boolean | null
+          email_notifications?: boolean | null
+          id?: string
+          language?: string | null
+          marketing_emails?: boolean | null
+          profile_visibility?: string | null
+          push_notifications?: boolean | null
+          theme?: string | null
+          transaction_alerts?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          currency?: string | null
+          data_sharing?: boolean | null
+          email_notifications?: boolean | null
+          id?: string
+          language?: string | null
+          marketing_emails?: boolean | null
+          profile_visibility?: string | null
+          push_notifications?: boolean | null
+          theme?: string | null
+          transaction_alerts?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
