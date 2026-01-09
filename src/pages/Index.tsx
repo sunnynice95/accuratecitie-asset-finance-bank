@@ -9,7 +9,7 @@ import { TransactionFilter } from "@/components/TransactionFilter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, User, Settings, LogOut, Loader2, ArrowRight } from "lucide-react";
+import { Bell, User, Settings as SettingsIcon, LogOut, Loader2, ArrowRight } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { toast } from "@/hooks/use-toast";
 import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
@@ -146,10 +146,22 @@ const Index = () => {
               <Button variant="ghost" size="icon" className="hover:bg-secondary">
                 <Bell className="h-5 w-5 text-foreground" />
               </Button>
-              <Button variant="ghost" size="icon" className="hover:bg-secondary">
-                <Settings className="h-5 w-5 text-foreground" />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="hover:bg-secondary"
+                onClick={() => navigate("/settings")}
+                title="Settings"
+              >
+                <SettingsIcon className="h-5 w-5 text-foreground" />
               </Button>
-              <Button variant="ghost" size="icon" className="hover:bg-secondary">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="hover:bg-secondary"
+                onClick={() => navigate("/profile")}
+                title="Profile"
+              >
                 <User className="h-5 w-5 text-foreground" />
               </Button>
               <Button

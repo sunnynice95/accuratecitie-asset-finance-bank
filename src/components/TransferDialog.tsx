@@ -39,6 +39,20 @@ const transferSchema = z.object({
     .min(5, "Account number must be at least 5 characters")
     .max(20, "Account number must be less than 20 characters")
     .regex(/^[0-9]+$/, "Account number must contain only numbers"),
+  toIban: z
+    .string()
+    .trim()
+    .max(34, "IBAN must be less than 34 characters")
+    .regex(/^[A-Z]{2}[0-9]{2}[A-Z0-9]+$/, "Invalid IBAN format")
+    .optional()
+    .or(z.literal("")),
+  toSwiftBic: z
+    .string()
+    .trim()
+    .max(11, "SWIFT/BIC must be 8-11 characters")
+    .regex(/^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/, "Invalid SWIFT/BIC format")
+    .optional()
+    .or(z.literal("")),
   toAccountName: z
     .string()
     .trim()
@@ -73,6 +87,8 @@ export const TransferDialog = ({ open, onOpenChange, accounts, onSuccess }: Tran
     defaultValues: {
       fromAccountId: "",
       toAccountNumber: "",
+      toIban: "",
+      toSwiftBic: "",
       toAccountName: "",
       amount: "" as any,
       description: "",
@@ -86,6 +102,8 @@ export const TransferDialog = ({ open, onOpenChange, accounts, onSuccess }: Tran
         body: {
           fromAccountId: values.fromAccountId,
           toAccountNumber: values.toAccountNumber,
+          toIban: values.toIban || null,
+          toSwiftBic: values.toSwiftBic || null,
           toAccountName: values.toAccountName,
           amount: values.amount,
           description: values.description,
@@ -172,6 +190,47 @@ export const TransferDialog = ({ open, onOpenChange, accounts, onSuccess }: Tran
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="toIban"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>IBAN (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g. DE89370400440532013000"
+                        {...field}
+                        maxLength={34}
+                        className="uppercase"
+                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="toSwiftBic"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>SWIFT/BIC (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g. COBADEFFXXX"
+                        {...field}
+                        maxLength={11}
+                        className="uppercase"
+                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
