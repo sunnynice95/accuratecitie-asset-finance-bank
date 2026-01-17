@@ -20,6 +20,8 @@ interface Account {
   account_number: string;
   balance: number;
   account_type: string;
+  iban: string | null;
+  swift_bic: string | null;
 }
 
 interface Transaction {
@@ -207,6 +209,7 @@ const Index = () => {
                 balance={parseFloat(account.balance.toString())}
                 change={0}
                 changeType="increase"
+                iban={account.iban}
               />
             ))}
           </div>
