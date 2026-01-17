@@ -6,6 +6,11 @@ import { QuickActions } from "@/components/QuickActions";
 import { TransferDialog } from "@/components/TransferDialog";
 import { TransactionDetailsDialog } from "@/components/TransactionDetailsDialog";
 import { TransactionFilter } from "@/components/TransactionFilter";
+import { DepositDialog } from "@/components/DepositDialog";
+import { PayBillDialog } from "@/components/PayBillDialog";
+import { MoreActionsSheet } from "@/components/MoreActionsSheet";
+import { BuyAirtimeDialog } from "@/components/BuyAirtimeDialog";
+import { RequestMoneyDialog } from "@/components/RequestMoneyDialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +18,6 @@ import { Bell, User, Settings as SettingsIcon, LogOut, Loader2, ArrowRight } fro
 import logo from "@/assets/logo.png";
 import { toast } from "@/hooks/use-toast";
 import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
-
 interface Account {
   id: string;
   account_name: string;
@@ -46,6 +50,11 @@ const Index = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [payBillDialogOpen, setPayBillDialogOpen] = useState(false);
+  const [moreActionsOpen, setMoreActionsOpen] = useState(false);
+  const [buyAirtimeDialogOpen, setBuyAirtimeDialogOpen] = useState(false);
+  const [requestMoneyDialogOpen, setRequestMoneyDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [transactionDetailsOpen, setTransactionDetailsOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterStatus>("all");
@@ -217,7 +226,12 @@ const Index = () => {
 
         {/* Quick Actions */}
         <div className="mb-8">
-          <QuickActions onTransferClick={() => setTransferDialogOpen(true)} />
+          <QuickActions 
+            onTransferClick={() => setTransferDialogOpen(true)}
+            onDepositClick={() => setDepositDialogOpen(true)}
+            onPayBillClick={() => setPayBillDialogOpen(true)}
+            onMoreClick={() => setMoreActionsOpen(true)}
+          />
         </div>
 
         {/* Recent Transactions */}
@@ -279,6 +293,40 @@ const Index = () => {
         onOpenChange={setTransferDialogOpen}
         accounts={accounts}
         onSuccess={handleTransferSuccess}
+      />
+
+      <DepositDialog
+        open={depositDialogOpen}
+        onOpenChange={setDepositDialogOpen}
+        accounts={accounts}
+        onSuccess={handleTransferSuccess}
+      />
+
+      <PayBillDialog
+        open={payBillDialogOpen}
+        onOpenChange={setPayBillDialogOpen}
+        accounts={accounts}
+        onSuccess={handleTransferSuccess}
+      />
+
+      <MoreActionsSheet
+        open={moreActionsOpen}
+        onOpenChange={setMoreActionsOpen}
+        onBuyAirtime={() => setBuyAirtimeDialogOpen(true)}
+        onRequestMoney={() => setRequestMoneyDialogOpen(true)}
+      />
+
+      <BuyAirtimeDialog
+        open={buyAirtimeDialogOpen}
+        onOpenChange={setBuyAirtimeDialogOpen}
+        accounts={accounts}
+        onSuccess={handleTransferSuccess}
+      />
+
+      <RequestMoneyDialog
+        open={requestMoneyDialogOpen}
+        onOpenChange={setRequestMoneyDialogOpen}
+        accounts={accounts}
       />
 
       <TransactionDetailsDialog
