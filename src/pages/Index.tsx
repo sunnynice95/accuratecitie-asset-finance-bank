@@ -14,10 +14,17 @@ import { RequestMoneyDialog } from "@/components/RequestMoneyDialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, Settings as SettingsIcon, LogOut, Loader2, ArrowRight } from "lucide-react";
+import { Bell, User, Settings as SettingsIcon, LogOut, Loader2, ArrowRight } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { toast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
 interface Account {
   id: string;
@@ -189,29 +196,40 @@ const Index = () => {
               >
                 <SettingsIcon className="h-5 w-5 text-foreground" />
               </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="hover:bg-secondary rounded-full p-0"
-                onClick={() => navigate("/profile")}
-                title="Profile"
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={avatarUrl || undefined} alt={userName} />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-                    {userName.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hover:bg-destructive/10 hover:text-destructive"
-                onClick={handleLogout}
-                title="Logout"
-              >
-                <LogOut className="h-5 w-5" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="hover:bg-secondary rounded-full p-0"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={avatarUrl || undefined} alt={userName} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                        {userName.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
+                    <SettingsIcon className="mr-2 h-4 w-4" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={handleLogout} 
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
