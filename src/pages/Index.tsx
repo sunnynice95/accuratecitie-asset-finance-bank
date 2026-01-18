@@ -14,9 +14,10 @@ import { RequestMoneyDialog } from "@/components/RequestMoneyDialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, User, Settings as SettingsIcon, LogOut, Loader2, ArrowRight } from "lucide-react";
+import { Bell, Settings as SettingsIcon, LogOut, Loader2, ArrowRight } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { toast } from "@/hooks/use-toast";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
 interface Account {
   id: string;
@@ -58,6 +59,7 @@ const Index = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [transactionDetailsOpen, setTransactionDetailsOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterStatus>("all");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -108,6 +110,20 @@ const Index = () => {
 
       if (transactionsError) throw transactionsError;
       setTransactions(transactionsData || []);
+
+      // Load profile for avatar
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("avatar_url")
+          .eq("id", user.id)
+          .single();
+        
+        if (profileData?.avatar_url) {
+          setAvatarUrl(profileData.avatar_url);
+        }
+      }
     } catch (error: any) {
       console.error("Error loading data:", error);
       toast({
@@ -169,11 +185,16 @@ const Index = () => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="hover:bg-secondary"
+                className="hover:bg-secondary rounded-full p-0"
                 onClick={() => navigate("/profile")}
                 title="Profile"
               >
-                <User className="h-5 w-5 text-foreground" />
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={avatarUrl || undefined} alt={userName} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                    {userName.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
               </Button>
               <Button
                 variant="ghost"
