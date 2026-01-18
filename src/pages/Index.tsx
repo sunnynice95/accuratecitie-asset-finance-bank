@@ -213,13 +213,21 @@ const Index = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground mb-2">
-            Welcome back, {userName}
-          </h2>
-          <p className="text-muted-foreground">
-            Here's an overview of your finances
-          </p>
+        <div className="mb-8 flex items-center gap-4">
+          <Avatar className="h-16 w-16 border-2 border-primary/20">
+            <AvatarImage src={avatarUrl || undefined} alt={userName} />
+            <AvatarFallback className="bg-primary text-primary-foreground text-xl font-semibold">
+              {userName.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h2 className="text-3xl font-bold text-foreground mb-1">
+              Welcome back, {userName}
+            </h2>
+            <p className="text-muted-foreground">
+              Here's an overview of your finances
+            </p>
+          </div>
         </div>
 
         {/* Account Cards */}
