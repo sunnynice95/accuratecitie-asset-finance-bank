@@ -252,6 +252,9 @@ const Index = () => {
             <p className="text-muted-foreground">
               Here's an overview of your finances
             </p>
+            <p className="text-sm text-muted-foreground/70 mt-1">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
           </div>
         </div>
 
