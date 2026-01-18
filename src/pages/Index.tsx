@@ -14,7 +14,7 @@ import { RequestMoneyDialog } from "@/components/RequestMoneyDialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, User, Settings as SettingsIcon, LogOut, Loader2, ArrowRight } from "lucide-react";
+import { Bell, User, Settings as SettingsIcon, LogOut, Loader2, ArrowRight, CreditCard, AlertCircle, CheckCircle2 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { toast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -184,9 +184,58 @@ const Index = () => {
               <h1 className="text-2xl font-bold text-foreground">Accuratecitiefinance</h1>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="hover:bg-secondary">
-                <Bell className="h-5 w-5 text-foreground" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="hover:bg-secondary relative">
+                    <Bell className="h-5 w-5 text-foreground" />
+                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive rounded-full text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
+                      3
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80">
+                  <div className="px-3 py-2 border-b border-border">
+                    <p className="font-semibold text-sm">Notifications</p>
+                    <p className="text-xs text-muted-foreground">You have 3 unread notifications</p>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto">
+                    <DropdownMenuItem className="flex items-start gap-3 p-3 cursor-pointer">
+                      <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">Transfer Completed</p>
+                        <p className="text-xs text-muted-foreground truncate">Your transfer of $500 was successful</p>
+                        <p className="text-xs text-muted-foreground mt-1">2 hours ago</p>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="flex items-start gap-3 p-3 cursor-pointer">
+                      <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                        <CreditCard className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">New Statement Available</p>
+                        <p className="text-xs text-muted-foreground truncate">Your January statement is ready to view</p>
+                        <p className="text-xs text-muted-foreground mt-1">1 day ago</p>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="flex items-start gap-3 p-3 cursor-pointer">
+                      <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                        <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">Security Alert</p>
+                        <p className="text-xs text-muted-foreground truncate">New login detected from Chrome on Windows</p>
+                        <p className="text-xs text-muted-foreground mt-1">2 days ago</p>
+                      </div>
+                    </DropdownMenuItem>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="justify-center text-primary cursor-pointer">
+                    View all notifications
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button 
                 variant="ghost" 
                 size="icon" 
