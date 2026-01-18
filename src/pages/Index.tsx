@@ -155,6 +155,13 @@ const Index = () => {
 
   const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "there";
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  };
+
   const filteredTransactions = activeFilter === "all" 
     ? transactions 
     : transactions.filter(t => t.status === activeFilter);
@@ -222,7 +229,7 @@ const Index = () => {
           </Avatar>
           <div>
             <h2 className="text-3xl font-bold text-foreground mb-1">
-              Welcome back, {userName}
+              {getGreeting()}, {userName}
             </h2>
             <p className="text-muted-foreground">
               Here's an overview of your finances
