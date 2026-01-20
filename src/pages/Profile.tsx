@@ -61,6 +61,8 @@ export default function Profile() {
   const [isSaving, setIsSaving] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -155,9 +157,18 @@ export default function Profile() {
     }
   };
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const processAvatarFile = async (file: File) => {
     if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (file.size > 2 * 1024 * 1024) {
       toast({
@@ -168,6 +179,7 @@ export default function Profile() {
       return;
     }
 
+    setIsUploadingAvatar(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
@@ -204,6 +216,38 @@ export default function Profile() {
         description: error.message || "Failed to upload avatar",
         variant: "destructive",
       });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      await processAvatarFile(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      await processAvatarFile(file);
     }
   };
 
@@ -238,8 +282,17 @@ export default function Profile() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Avatar Section */}
             <Card className="p-6">
-              <div className="flex items-center gap-6">
-                <div className="relative">
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div 
+                  className={`relative group cursor-pointer rounded-full transition-all ${
+                    isDragging 
+                      ? "ring-4 ring-primary ring-offset-2 ring-offset-background" 
+                      : ""
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
                   <Avatar className="h-24 w-24">
                     <AvatarImage src={avatarUrl || ""} />
                     <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
@@ -248,9 +301,15 @@ export default function Profile() {
                   </Avatar>
                   <label
                     htmlFor="avatar-upload"
-                    className="absolute bottom-0 right-0 p-1.5 bg-accent rounded-full cursor-pointer hover:bg-accent/80 transition-colors"
+                    className={`absolute inset-0 flex items-center justify-center bg-black/50 rounded-full transition-opacity cursor-pointer ${
+                      isDragging || isUploadingAvatar ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    }`}
                   >
-                    <Upload className="h-4 w-4 text-accent-foreground" />
+                    {isUploadingAvatar ? (
+                      <Loader2 className="h-6 w-6 text-white animate-spin" />
+                    ) : (
+                      <Upload className="h-6 w-6 text-white" />
+                    )}
                   </label>
                   <input
                     id="avatar-upload"
@@ -258,11 +317,13 @@ export default function Profile() {
                     accept="image/*"
                     className="hidden"
                     onChange={handleAvatarUpload}
+                    disabled={isUploadingAvatar}
                   />
                 </div>
-                <div>
+                <div className="text-center sm:text-left">
                   <h2 className="text-xl font-semibold text-foreground">{profile?.full_name || "User"}</h2>
                   <p className="text-muted-foreground">Update your photo and personal details</p>
+                  <p className="text-xs text-muted-foreground mt-1">Drag & drop or click to upload (max 2MB)</p>
                 </div>
               </div>
             </Card>
