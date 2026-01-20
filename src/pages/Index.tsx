@@ -14,7 +14,8 @@ import { RequestMoneyDialog } from "@/components/RequestMoneyDialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, User, Settings as SettingsIcon, LogOut, Loader2, ArrowRight, CreditCard, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Bell, User, Settings as SettingsIcon, LogOut, Loader2, ArrowRight, CreditCard, AlertCircle, CheckCircle2, Camera } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import logo from "@/assets/logo.png";
 import { toast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -67,6 +68,7 @@ const Index = () => {
   const [transactionDetailsOpen, setTransactionDetailsOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterStatus>("all");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -150,6 +152,72 @@ const Index = () => {
 
   const handleTransferSuccess = () => {
     loadData();
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image under 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.id}/avatar.${fileExt}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from("dbanking")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("dbanking")
+        .getPublicUrl(fileName);
+
+      // Update profile with new avatar URL
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("id", user.id);
+
+      if (updateError) throw updateError;
+
+      setAvatarUrl(publicUrl);
+      toast({
+        title: "Success",
+        description: "Profile picture updated successfully",
+      });
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error);
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload profile picture",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
   };
 
   if (isLoading) {
@@ -288,12 +356,32 @@ const Index = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8 flex items-center gap-4">
-          <Avatar className="h-16 w-16 border-2 border-primary/20">
-            <AvatarImage src={avatarUrl || undefined} alt={userName} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-xl font-semibold">
-              {userName.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative group">
+            <Avatar className="h-16 w-16 border-2 border-primary/20">
+              <AvatarImage src={avatarUrl || undefined} alt={userName} />
+              <AvatarFallback className="bg-primary text-primary-foreground text-xl font-semibold">
+                {userName.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <label 
+              htmlFor="avatar-upload" 
+              className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            >
+              {isUploadingAvatar ? (
+                <Loader2 className="h-5 w-5 text-white animate-spin" />
+              ) : (
+                <Camera className="h-5 w-5 text-white" />
+              )}
+            </label>
+            <Input
+              id="avatar-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+              disabled={isUploadingAvatar}
+            />
+          </div>
           <div>
             <h2 className="text-3xl font-bold text-foreground mb-1">
               {getGreeting()}, {userName}
