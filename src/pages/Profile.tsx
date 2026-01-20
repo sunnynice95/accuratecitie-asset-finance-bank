@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,6 +27,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2, User, Phone, MapPin, Calendar, Shield, Upload } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { ImageCropDialog } from "@/components/ImageCropDialog";
 
 const profileSchema = z.object({
   full_name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
@@ -63,6 +64,9 @@ export default function Profile() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -157,7 +161,7 @@ export default function Profile() {
     }
   };
 
-  const processAvatarFile = async (file: File) => {
+  const openCropDialog = (file: File) => {
     if (!file) return;
 
     // Validate file type
@@ -170,26 +174,35 @@ export default function Profile() {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) { // Allow larger files for cropping, will be compressed after
       toast({
         title: "File too large",
-        description: "Avatar must be less than 2MB",
+        description: "Image must be less than 10MB",
         variant: "destructive",
       });
       return;
     }
 
+    // Create object URL for cropping
+    const imageUrl = URL.createObjectURL(file);
+    setImageToCrop(imageUrl);
+    setCropDialogOpen(true);
+  };
+
+  const uploadCroppedAvatar = async (croppedBlob: Blob) => {
     setIsUploadingAvatar(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${session.user.id}/avatar.${fileExt}`;
+      const fileName = `${session.user.id}/avatar.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from("dbanking")
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, croppedBlob, { 
+          upsert: true,
+          contentType: "image/jpeg"
+        });
 
       if (uploadError) throw uploadError;
 
@@ -197,14 +210,17 @@ export default function Profile() {
         .from("dbanking")
         .getPublicUrl(fileName);
 
+      // Add cache-busting query param
+      const urlWithCacheBust = `${publicUrl}?t=${Date.now()}`;
+
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({ avatar_url: publicUrl })
+        .update({ avatar_url: urlWithCacheBust })
         .eq("id", session.user.id);
 
       if (updateError) throw updateError;
 
-      setAvatarUrl(publicUrl);
+      setAvatarUrl(urlWithCacheBust);
       toast({
         title: "Avatar Updated",
         description: "Your profile picture has been updated.",
@@ -218,13 +234,22 @@ export default function Profile() {
       });
     } finally {
       setIsUploadingAvatar(false);
+      // Cleanup object URL
+      if (imageToCrop) {
+        URL.revokeObjectURL(imageToCrop);
+        setImageToCrop(null);
+      }
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      await processAvatarFile(file);
+      openCropDialog(file);
     }
   };
 
@@ -240,14 +265,25 @@ export default function Profile() {
     setIsDragging(false);
   };
 
-  const handleDrop = async (e: React.DragEvent) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
 
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      await processAvatarFile(file);
+      openCropDialog(file);
+    }
+  };
+
+  const handleCropDialogClose = (open: boolean) => {
+    setCropDialogOpen(open);
+    if (!open && imageToCrop) {
+      URL.revokeObjectURL(imageToCrop);
+      setImageToCrop(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -312,6 +348,7 @@ export default function Profile() {
                     )}
                   </label>
                   <input
+                    ref={fileInputRef}
                     id="avatar-upload"
                     type="file"
                     accept="image/*"
@@ -323,7 +360,7 @@ export default function Profile() {
                 <div className="text-center sm:text-left">
                   <h2 className="text-xl font-semibold text-foreground">{profile?.full_name || "User"}</h2>
                   <p className="text-muted-foreground">Update your photo and personal details</p>
-                  <p className="text-xs text-muted-foreground mt-1">Drag & drop or click to upload (max 2MB)</p>
+                  <p className="text-xs text-muted-foreground mt-1">Drag & drop or click to upload • Auto-cropped to square</p>
                 </div>
               </div>
             </Card>
@@ -498,6 +535,16 @@ export default function Profile() {
             </div>
           </form>
         </Form>
+
+        {/* Image Crop Dialog */}
+        {imageToCrop && (
+          <ImageCropDialog
+            open={cropDialogOpen}
+            onOpenChange={handleCropDialogClose}
+            imageSrc={imageToCrop}
+            onCropComplete={uploadCroppedAvatar}
+          />
+        )}
       </main>
     </div>
   );
